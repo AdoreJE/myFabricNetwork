@@ -1,0 +1,6 @@
+node_modules/
+*.pem
+*.db
+
+# !test-network/organizations/fabric-ca/registerEnroll.sh
+# !test-network/organizations/fabric-ca/customer/fabric-ca-server-config.yaml
