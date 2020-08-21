@@ -39,7 +39,7 @@ if [ "$CC_SRC_PATH" = "NA" ]; then
 	# short name of the known chaincode sample
 	if [ "$CC_NAME" = "basic" ]; then
 		echo $'\e[0;32m'asset-transfer-basic$'\e[0m' chaincode
-		CC_SRC_PATH="../asset-transfer-basic"
+		CC_SRC_PATH="../../my-fabric-samples/asset-transfer-basic"
 	elif [ "$CC_NAME" = "secured" ]; then
 		echo $'\e[0;32m'asset-transfer-secured-agreeement$'\e[0m' chaincode
 		CC_SRC_PATH="../asset-transfer-secured-agreement"
@@ -146,74 +146,77 @@ fi
 
 packageChaincode() {
 	ORG=$1
-	setGlobals $ORG
+	setGlobals $ORG $2
 	set -x
-	peer lifecycle chaincode package ${CC_NAME}.tar.gz --path ${CC_SRC_PATH} --lang ${CC_RUNTIME_LANGUAGE} --label ${CC_NAME}_${CC_VERSION} >&log.txt
+	peer lifecycle chaincode package ${CC_NAME}-${NUM}.tar.gz --path ${CC_SRC_PATH} --lang ${CC_RUNTIME_LANGUAGE} --label ${CC_NAME}-${NUM}_${CC_VERSION} >&log.txt
 	res=$?
 	set +x
 	cat log.txt
-	verifyResult $res "Chaincode packaging on peer0.org${ORG} has failed"
-	echo "===================== Chaincode is packaged on peer0.org${ORG} ===================== "
+	verifyResult $res "Chaincode packaging on peer${2}.${ORG} has failed"
+	echo "===================== Chaincode is packaged on peer${2}.${ORG} ===================== "
 	echo
 }
 
 # installChaincode PEER ORG
 installChaincode() {
 	ORG=$1
-	setGlobals $ORG
+	setGlobals $ORG $2
 	set -x
-	peer lifecycle chaincode install ${CC_NAME}.tar.gz >&log.txt
+	peer lifecycle chaincode install ${CC_NAME}-${NUM}.tar.gz >&log.txt
 	res=$?
 	set +x
 	cat log.txt
-	verifyResult $res "Chaincode installation on peer0.org${ORG} has failed"
-	echo "===================== Chaincode is installed on peer0.org${ORG} ===================== "
+	verifyResult $res "Chaincode installation on peer${2}.${ORG} has failed"
+	echo "===================== Chaincode is installed on peer${2}.${ORG} ===================== "
 	echo
 }
 
 # queryInstalled PEER ORG
 queryInstalled() {
 	ORG=$1
-	setGlobals $ORG
+	setGlobals $ORG $2
 	set -x
 	peer lifecycle chaincode queryinstalled >&log.txt
 	res=$?
 	set +x
 	cat log.txt
-	PACKAGE_ID=$(sed -n "/${CC_NAME}_${CC_VERSION}/{s/^Package ID: //; s/, Label:.*$//; p;}" log.txt)
-	verifyResult $res "Query installed on peer0.org${ORG} has failed"
-	echo "===================== Query installed successful on peer0.org${ORG} on channel ===================== "
+	PACKAGE_ID=$(sed -n "/${CC_NAME}-${NUM}_${CC_VERSION}/{s/^Package ID: //; s/, Label:.*$//; p;}" log.txt)
+	verifyResult $res "Query installed on peer${2}.${ORG} has failed"
+	echo "===================== Query installed successful on peer${2}.${ORG} on channel ===================== "
 	echo
 }
 
 # approveForMyOrg VERSION PEER ORG
 approveForMyOrg() {
 	ORG=$1
-	setGlobals $ORG
+	setGlobals $ORG $2
+	checkChannel $@
 	set -x
-	peer lifecycle chaincode approveformyorg -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --tls --cafile $ORDERER_CA --channelID $CHANNEL_NAME --name ${CC_NAME} --version ${CC_VERSION} --package-id ${PACKAGE_ID} --sequence ${CC_SEQUENCE} ${INIT_REQUIRED} ${CC_END_POLICY} ${CC_COLL_CONFIG} >&log.txt
+	peer lifecycle chaincode approveformyorg -o localhost:7050 --ordererTLSHostnameOverride raft1.example.com --tls --cafile $ORDERER_CA --channelID $MY_CHANNEL_NAME --name ${CC_NAME}-${NUM} --version ${CC_VERSION} --package-id ${PACKAGE_ID} --sequence ${CC_SEQUENCE} ${INIT_REQUIRED} ${CC_END_POLICY} ${CC_COLL_CONFIG} >&log.txt
 	set +x
 	cat log.txt
-	verifyResult $res "Chaincode definition approved on peer0.org${ORG} on channel '$CHANNEL_NAME' failed"
-	echo "===================== Chaincode definition approved on peer0.org${ORG} on channel '$CHANNEL_NAME' ===================== "
+	verifyResult $res "Chaincode definition approved on peer${MYPEER}.${ORG} on channel '$MY_CHANNEL_NAME' failed"
+	echo "===================== Chaincode definition approved on peer${2}.${ORG} on channel '$MY_CHANNEL_NAME' ===================== "
 	echo
 }
 
 # checkCommitReadiness VERSION PEER ORG
 checkCommitReadiness() {
 	ORG=$1
-	shift 1
-	setGlobals $ORG
-	echo "===================== Checking the commit readiness of the chaincode definition on peer0.org${ORG} on channel '$CHANNEL_NAME'... ===================== "
+	MYPEER=$2
+	setGlobals $ORG $MYPEER
+	checkChannel $1 $2
+	shift 2
+	echo "===================== Checking the commit readiness of the chaincode definition on peer${MYPEER}.${ORG} on channel '$MY_CHANNEL_NAME'... ===================== "
 	local rc=1
 	local COUNTER=1
 	# continue to poll
 	# we either get a successful response, or reach MAX RETRY
 	while [ $rc -ne 0 -a $COUNTER -lt $MAX_RETRY ]; do
 		sleep $DELAY
-		echo "Attempting to check the commit readiness of the chaincode definition on peer0.org${ORG}, Retry after $DELAY seconds."
+		echo "Attempting to check the commit readiness of the chaincode definition on peer${MYPEER}.${ORG}, Retry after $DELAY seconds."
 		set -x
-		peer lifecycle chaincode checkcommitreadiness --channelID $CHANNEL_NAME --name ${CC_NAME} --version ${CC_VERSION} --sequence ${CC_SEQUENCE} ${INIT_REQUIRED} ${CC_END_POLICY} ${CC_COLL_CONFIG} --output json >&log.txt
+		peer lifecycle chaincode checkcommitreadiness --channelID $MY_CHANNEL_NAME --name ${CC_NAME}-${NUM} --version ${CC_VERSION} --sequence ${CC_SEQUENCE} ${INIT_REQUIRED} ${CC_END_POLICY} ${CC_COLL_CONFIG} --output json >&log.txt
 		res=$?
 		set +x
 		let rc=0
@@ -224,10 +227,10 @@ checkCommitReadiness() {
 	done
 	cat log.txt
 	if test $rc -eq 0; then
-		echo "===================== Checking the commit readiness of the chaincode definition successful on peer0.org${ORG} on channel '$CHANNEL_NAME' ===================== "
+		echo "===================== Checking the commit readiness of the chaincode definition successful on peer${MYPEER}.${ORG} on channel '$MY_CHANNEL_NAME' ===================== "
 	else
 		echo
-		echo $'\e[1;31m'"!!!!!!!!!!!!!!! After $MAX_RETRY attempts, Check commit readiness result on peer0.org${ORG} is INVALID !!!!!!!!!!!!!!!!"$'\e[0m'
+		echo $'\e[1;31m'"!!!!!!!!!!!!!!! After $MAX_RETRY attempts, Check commit readiness result on peer${MYPEER}.${ORG} is INVALID !!!!!!!!!!!!!!!!"$'\e[0m'
 		echo
 		exit 1
 	fi
@@ -237,36 +240,38 @@ checkCommitReadiness() {
 commitChaincodeDefinition() {
 	parsePeerConnectionParameters $@
 	res=$?
-	verifyResult $res "Invoke transaction failed on channel '$CHANNEL_NAME' due to uneven number of peer and org parameters "
+	checkChannel $1 $2
+	verifyResult $res "Invoke transaction failed on channel '$MY_CHANNEL_NAME' due to uneven number of peer and org parameters "
 
 	# while 'peer chaincode' command can get the orderer endpoint from the
 	# peer (if join was successful), let's supply it directly as we know
 	# it using the "-o" option
 	set -x
-	peer lifecycle chaincode commit -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --tls --cafile $ORDERER_CA --channelID $CHANNEL_NAME --name ${CC_NAME} $PEER_CONN_PARMS --version ${CC_VERSION} --sequence ${CC_SEQUENCE} ${INIT_REQUIRED} ${CC_END_POLICY} ${CC_COLL_CONFIG} >&log.txt
+	peer lifecycle chaincode commit -o localhost:7050 --ordererTLSHostnameOverride raft1.example.com --tls --cafile $ORDERER_CA --channelID $MY_CHANNEL_NAME --name ${CC_NAME}-${NUM} $PEER_CONN_PARMS --version ${CC_VERSION} --sequence ${CC_SEQUENCE} ${INIT_REQUIRED} ${CC_END_POLICY} ${CC_COLL_CONFIG} >&log.txt
 	res=$?
 	set +x
 	cat log.txt
-	verifyResult $res "Chaincode definition commit failed on peer0.org${ORG} on channel '$CHANNEL_NAME' failed"
-	echo "===================== Chaincode definition committed on channel '$CHANNEL_NAME' ===================== "
+	verifyResult $res "Chaincode definition commit failed on peer${MYPEER}.${ORG} on channel '$MY_CHANNEL_NAME' failed"
+	echo "===================== Chaincode definition committed on channel '$MY_CHANNEL_NAME' ===================== "
 	echo
 }
 
 # queryCommitted ORG
 queryCommitted() {
 	ORG=$1
-	setGlobals $ORG
+	setGlobals $ORG $2
+	checkChannel $1 $2
 	EXPECTED_RESULT="Version: ${CC_VERSION}, Sequence: ${CC_SEQUENCE}, Endorsement Plugin: escc, Validation Plugin: vscc"
-	echo "===================== Querying chaincode definition on peer0.org${ORG} on channel '$CHANNEL_NAME'... ===================== "
+	echo "===================== Querying chaincode definition on peer${MYPEER}.${ORG} on channel '$MY_CHANNEL_NAME'... ===================== "
 	local rc=1
 	local COUNTER=1
 	# continue to poll
 	# we either get a successful response, or reach MAX RETRY
 	while [ $rc -ne 0 -a $COUNTER -lt $MAX_RETRY ]; do
 		sleep $DELAY
-		echo "Attempting to Query committed status on peer0.org${ORG}, Retry after $DELAY seconds."
+		echo "Attempting to Query committed status on peer${MYPEER}.${ORG}, Retry after $DELAY seconds."
 		set -x
-		peer lifecycle chaincode querycommitted --channelID $CHANNEL_NAME --name ${CC_NAME} >&log.txt
+		peer lifecycle chaincode querycommitted --channelID $MY_CHANNEL_NAME --name ${CC_NAME}-${NUM} >&log.txt
 		res=$?
 		set +x
 		test $res -eq 0 && VALUE=$(cat log.txt | grep -o '^Version: '$CC_VERSION', Sequence: [0-9], Endorsement Plugin: escc, Validation Plugin: vscc')
@@ -276,11 +281,11 @@ queryCommitted() {
 	echo
 	cat log.txt
 	if test $rc -eq 0; then
-		echo "===================== Query chaincode definition successful on peer0.org${ORG} on channel '$CHANNEL_NAME' ===================== "
+		echo "===================== Query chaincode definition successful on peer${MYPEER}.${ORG} on channel '$MY_CHANNEL_NAME' ===================== "
 		echo
 	else
 		echo
-		echo $'\e[1;31m'"!!!!!!!!!!!!!!! After $MAX_RETRY attempts, Query chaincode definition result on peer0.org${ORG} is INVALID !!!!!!!!!!!!!!!!"$'\e[0m'
+		echo $'\e[1;31m'"!!!!!!!!!!!!!!! After $MAX_RETRY attempts, Query chaincode definition result on ${MYPEER}.${ORG} is INVALID !!!!!!!!!!!!!!!!"$'\e[0m'
 		echo
 		exit 1
 	fi
@@ -288,8 +293,9 @@ queryCommitted() {
 
 chaincodeInvokeInit() {
 	parsePeerConnectionParameters $@
+	checkChannel $1 $2
 	res=$?
-	verifyResult $res "Invoke transaction failed on channel '$CHANNEL_NAME' due to uneven number of peer and org parameters "
+	verifyResult $res "Invoke transaction failed on channel '$MY_CHANNEL_NAME' due to uneven number of peer and org parameters "
 
 	# while 'peer chaincode' command can get the orderer endpoint from the
 	# peer (if join was successful), let's supply it directly as we know
@@ -297,28 +303,30 @@ chaincodeInvokeInit() {
 	set -x
 	fcn_call='{"function":"'${CC_INIT_FCN}'","Args":[]}'
 	echo invoke fcn call:${fcn_call}
-	peer chaincode invoke -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --tls --cafile $ORDERER_CA -C $CHANNEL_NAME -n ${CC_NAME} $PEER_CONN_PARMS --isInit -c ${fcn_call} >&log.txt
+	peer chaincode invoke -o localhost:7050 --ordererTLSHostnameOverride raft1.example.com --tls --cafile $ORDERER_CA -C $MY_CHANNEL_NAME -n ${CC_NAME}-${NUM} $PEER_CONN_PARMS --isInit -c ${fcn_call} >&log.txt
+
 	res=$?
 	set +x
 	cat log.txt
 	verifyResult $res "Invoke execution on $PEERS failed "
-	echo "===================== Invoke transaction successful on $PEERS on channel '$CHANNEL_NAME' ===================== "
+	echo "===================== Invoke transaction successful on $PEERS on channel '$MY_CHANNEL_NAME' ===================== "
 	echo
 }
 
 chaincodeQuery() {
 	ORG=$1
-	setGlobals $ORG
-	echo "===================== Querying on peer0.org${ORG} on channel '$CHANNEL_NAME'... ===================== "
+	setGlobals $ORG $2
+	checkChannel $1 $2
+	echo "===================== Querying on peer${MYPEER}.${ORG} on channel '$MY_CHANNEL_NAME'... ===================== "
 	local rc=1
 	local COUNTER=1
 	# continue to poll
 	# we either get a successful response, or reach MAX RETRY
 	while [ $rc -ne 0 -a $COUNTER -lt $MAX_RETRY ]; do
 		sleep $DELAY
-		echo "Attempting to Query peer0.org${ORG}, Retry after $DELAY seconds."
+		echo "Attempting to Query peer${MYPEER}.${ORG}, Retry after $DELAY seconds."
 		set -x
-		peer chaincode query -C $CHANNEL_NAME -n ${CC_NAME} -c '{"Args":["queryAllCars"]}' >&log.txt
+		peer chaincode query -C $MY_CHANNEL_NAME -n ${CC_NAME}-${NUM} -c '{"Args":["queryAllCars"]}' >&log.txt
 		res=$?
 		set +x
 		let rc=$res
@@ -327,50 +335,68 @@ chaincodeQuery() {
 	echo
 	cat log.txt
 	if test $rc -eq 0; then
-		echo "===================== Query successful on peer0.org${ORG} on channel '$CHANNEL_NAME' ===================== "
+		echo "===================== Query successful on peer${MYPEER}.${ORG} on channel '$MY_CHANNEL_NAME' ===================== "
 		echo
 	else
 		echo
-		echo $'\e[1;31m'"!!!!!!!!!!!!!!! After $MAX_RETRY attempts, Query result on peer0.org${ORG} is INVALID !!!!!!!!!!!!!!!!"$'\e[0m'
+		echo $'\e[1;31m'"!!!!!!!!!!!!!!! After $MAX_RETRY attempts, Query result on peer${MYPEER}.${ORG} is INVALID !!!!!!!!!!!!!!!!"$'\e[0m'
 		echo
 		exit 1
 	fi
 }
 
-## package the chaincode
-packageChaincode 1
 
-## Install chaincode on peer0.org1 and peer0.org2
-echo "Installing chaincode on peer0.org1..."
-installChaincode 1
-echo "Install chaincode on peer0.org2..."
-installChaincode 2
+checkChannel(){
+	ORG=$1
+	MYPEER=$2
+	if [ $ORG == 'sales1' ]; then
+		MY_CHANNEL_NAME=${CHANNEL_NAME}1
+		ANCHOR_CHANNEL=""
+		NUM="ch1"
+	elif [ $ORG == 'sales2' ]; then
+		MY_CHANNEL_NAME=${CHANNEL_NAME}2
+		ANCHOR_CHANNEL=""
+		NUM="ch2"
+	elif [ $ORG == 'customer' ] && [ $MYPEER -eq 0 ]; then
+		MY_CHANNEL_NAME=${CHANNEL_NAME}1
+		ANCHOR_CHANNEL='Channel1'
+		NUM="ch1"
+	elif [ $ORG == 'customer' ] && [ $MYPEER -eq 1 ]; then
+		MY_CHANNEL_NAME=${CHANNEL_NAME}2
+		ANCHOR_CHANNEL='Channel2'
+		NUM="ch2"
+	fi
+}
+################
+## mychannel1 ##
+################
+## package the chaincode
+packageChaincode sales1 0
+
+## Install chaincode on peer0.sales1 and peer0.customer
+echo "Installing chaincode on peer0.sales1..."
+installChaincode sales1 0
+echo "Install chaincode on peer0.customer..."
+installChaincode customer 0
 
 ## query whether the chaincode is installed
-queryInstalled 1
+queryInstalled sales1 0
 
-## approve the definition for org1
-approveForMyOrg 1
-
-## check whether the chaincode definition is ready to be committed
-## expect org1 to have approved and org2 not to
-checkCommitReadiness 1 "\"Org1MSP\": true" "\"Org2MSP\": false"
-checkCommitReadiness 2 "\"Org1MSP\": true" "\"Org2MSP\": false"
-
-## now approve also for org2
-approveForMyOrg 2
+## approve the definition for sales1
+approveForMyOrg sales1 0
+## now approve also for customer
+approveForMyOrg customer 0
 
 ## check whether the chaincode definition is ready to be committed
 ## expect them both to have approved
-checkCommitReadiness 1 "\"Org1MSP\": true" "\"Org2MSP\": true"
-checkCommitReadiness 2 "\"Org1MSP\": true" "\"Org2MSP\": true"
+checkCommitReadiness sales1 0 "\"CustomerMSP\": true" "\"Sales1MSP\": true" 
 
 ## now that we know for sure both orgs have approved, commit the definition
-commitChaincodeDefinition 1 2
+commitChaincodeDefinition sales1 0 customer 0
 
 ## query on both orgs to see that the definition committed successfully
-queryCommitted 1
-queryCommitted 2
+queryCommitted sales1 0
+queryCommitted customer 0
 
 ## Invoke the chaincode - this does require that the chaincode have the 'initLedger'
 ## method defined
@@ -378,7 +404,47 @@ if [ "$CC_INIT_FCN" = "NA" ]; then
 	echo "===================== Chaincode initialization is not required ===================== "
 	echo
 else
-	chaincodeInvokeInit 1 2
+	chaincodeInvokeInit sales1 0 customer 0
+fi
+
+################
+## mychannel2 ##
+################
+## package the chaincode
+packageChaincode sales2 0
+
+## Install chaincode on peer0.sales2 and peer1.customer
+echo "Installing chaincode on peer0.sales2..."
+installChaincode sales2 0
+echo "Install chaincode on peer1.customer..."
+installChaincode customer 1
+
+## query whether the chaincode is installed
+queryInstalled sales2 0
+
+## approve the definition for sales2
+approveForMyOrg sales2 0
+## now approve also for customer
+approveForMyOrg customer 1
+
+## check whether the chaincode definition is ready to be committed
+## expect them both to have approved
+checkCommitReadiness sales2 0 "\"CustomerMSP\": true" "\"Sales2MSP\": true" 
+
+## now that we know for sure both orgs have approved, commit the definition
+commitChaincodeDefinition sales2 0 customer 1
+
+## query on both orgs to see that the definition committed successfully
+queryCommitted sales2 0
+queryCommitted customer 1
+
+## Invoke the chaincode - this does require that the chaincode have the 'initLedger'
+## method defined
+if [ "$CC_INIT_FCN" = "NA" ]; then
+	echo "===================== Chaincode initialization is not required ===================== "
+	echo
+else
+	chaincodeInvokeInit sales2 0 customer 1
 fi
 
 exit 0

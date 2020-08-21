@@ -2,5 +2,7 @@ node_modules/
 *.pem
 *.db
 
+vendor/
+
 # !test-network/organizations/fabric-ca/registerEnroll.sh
 # !test-network/organizations/fabric-ca/customer/fabric-ca-server-config.yaml

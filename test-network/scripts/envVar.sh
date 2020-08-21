@@ -47,31 +47,37 @@ setGlobals() {
     export CORE_PEER_TLS_ROOTCERT_FILE=$PEER0_SALES1_CA
     export CORE_PEER_MSPCONFIGPATH=${PWD}/organizations/peerOrganizations/sales1.example.com/users/Admin@sales1.example.com/msp
     export CORE_PEER_ADDRESS=localhost:7051
+    export NUM="ch1"
   elif [ $USING_ORG == 'sales1' ] && [ $MYPEER -eq 1 ]; then
     export CORE_PEER_LOCALMSPID="Sales1MSP"
     export CORE_PEER_TLS_ROOTCERT_FILE=$PEER1_SALES1_CA
     export CORE_PEER_MSPCONFIGPATH=${PWD}/organizations/peerOrganizations/sales1.example.com/users/Admin@sales1.example.com/msp
     export CORE_PEER_ADDRESS=localhost:8051
+    export NUM="ch1"
   elif [ $USING_ORG == 'sales2' ] && [ $MYPEER -eq 0 ]; then
     export CORE_PEER_LOCALMSPID="Sales2MSP"
     export CORE_PEER_TLS_ROOTCERT_FILE=$PEER0_SALES2_CA
     export CORE_PEER_MSPCONFIGPATH=${PWD}/organizations/peerOrganizations/sales2.example.com/users/Admin@sales2.example.com/msp
     export CORE_PEER_ADDRESS=localhost:9051 
+    export NUM="ch2"
   elif [ $USING_ORG == 'sales2' ] && [ $MYPEER -eq 1 ]; then
     export CORE_PEER_LOCALMSPID="Sales2MSP"
     export CORE_PEER_TLS_ROOTCERT_FILE=$PEER1_SALES2_CA
     export CORE_PEER_MSPCONFIGPATH=${PWD}/organizations/peerOrganizations/sales2.example.com/users/Admin@sales2.example.com/msp
     export CORE_PEER_ADDRESS=localhost:10051  
+    export NUM="ch2"
   elif [ $USING_ORG == 'customer' ] && [ $MYPEER -eq 0 ]; then
     export CORE_PEER_LOCALMSPID="CustomerMSP"
     export CORE_PEER_TLS_ROOTCERT_FILE=$PEER0_CUSTOMER_CA
     export CORE_PEER_MSPCONFIGPATH=${PWD}/organizations/peerOrganizations/customer.example.com/users/Admin@customer.example.com/msp
     export CORE_PEER_ADDRESS=localhost:11051
+    export NUM="ch1"
   elif [ $USING_ORG == 'customer' ] && [ $MYPEER -eq 1 ]; then
     export CORE_PEER_LOCALMSPID="CustomerMSP"
     export CORE_PEER_TLS_ROOTCERT_FILE=$PEER1_CUSTOMER_CA
     export CORE_PEER_MSPCONFIGPATH=${PWD}/organizations/peerOrganizations/customer.example.com/users/Admin@customer.example.com/msp
     export CORE_PEER_ADDRESS=localhost:12051
+    export NUM="ch2"
   else
     echo "================== ERROR !!! ORG Unknown =================="
   fi
