@@ -43,7 +43,7 @@ Organizations:
 
         OrdererEndpoints:
             - raft1.example.com:7050
-            # - raft2.example.com:8050
+            - raft2.example.com:8050
 
     - &Sales1Org
         # DefaultOrg defines the organization which is used in the sampleconfig
