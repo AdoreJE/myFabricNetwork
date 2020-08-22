@@ -82,13 +82,13 @@ export CORE_PEER_ADDRESS=localhost:7051
 peer0.sales1에 대한 환경변수를 설정한 경우
 
 ```bash
-peer chaincode query -C mychannel1 -n fabcar-ch1 -c '{"function":"queryAllCars","Args":[""]}
+peer chaincode query -C mychannel1 -n fabcar-ch1 -c '{"function":"queryAllCars","Args":[""]}'
 ```
 
 peer0.sales2에 대한 환경변수를 설정한 경우
 
 ```bash
-peer chaincode query -C mychannel2 -n fabcar-ch2 -c '{"function":"queryAllCars","Args":[""]}
+peer chaincode query -C mychannel2 -n fabcar-ch2 -c '{"function":"queryAllCars","Args":[""]}'
 ```
 
 7. couchdb 확인
